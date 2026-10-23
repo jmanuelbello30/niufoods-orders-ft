@@ -1,7 +1,7 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { OrdersResponse, RetryDispatchResponse } from '../models/order.model';
+import { OrderDetailResponse, OrdersResponse, RetryDispatchResponse } from '../models/order.model';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
@@ -46,5 +46,34 @@ describe('OrdersService', () => {
     expect(request.request.body).toEqual({});
     request.flush(response);
     expect(result).toEqual(response);
+  });
+
+  it('requests a single order detail by GET and returns its items', () => {
+    const response: OrderDetailResponse = {
+      data: {
+        id: 6, restaurant_id: 3, restaurant: { id: 3, name: 'Niu Foods Ñuñoa', code: 'NUNO' },
+        total_amount: 50690, order_type: 'delivery', created_at: '2026-10-23T00:01:56.520Z',
+        dispatch_status: 'sent', customer: { name: 'Simulation Customer 6', phone: '+56000000000' },
+        delivery_address: 'Fictional Street 6', dispatched_at: '2026-10-23T00:01:56.549Z',
+        items: [{ id: 14, product_id: 10, product_name: 'Agua Mineral 500 ml', sku: 'SKU-010', quantity: 3, unit_price: 1590, subtotal: 4770 }],
+      },
+    };
+    let result: OrderDetailResponse | undefined;
+    service.getOrder(6).subscribe((value) => result = value);
+    const request = http.expectOne('/api/v1/orders/6');
+    expect(request.request.method).toBe('GET');
+    request.flush(response);
+    expect(result).toEqual(response);
+  });
+
+  it('propagates a detail 404', () => {
+    let status: number | undefined;
+    service.getOrder(999).subscribe({
+      error: (error: unknown) => {
+        if (error instanceof HttpErrorResponse) status = error.status;
+      },
+    });
+    http.expectOne('/api/v1/orders/999').flush('', { status: 404, statusText: 'Not Found' });
+    expect(status).toBe(404);
   });
 });

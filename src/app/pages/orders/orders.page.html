@@ -8,7 +8,7 @@
       @if (lastUpdated) {
         <span class="last-updated">Última actualización: {{ formatTime(lastUpdated) }}</span>
       }
-      <button type="button" class="refresh-button btn" (click)="refresh()" [disabled]="isLoading || retryingOrderId !== null">
+      <button type="button" class="refresh-button btn" (click)="refresh(true)" [disabled]="isLoading || retryingOrderId !== null">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 7v5h-5M4 17v-5h5" />
           <path d="M5.5 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.5-2" />
@@ -30,8 +30,18 @@
   }
 
   @if (retryMessage) {
-    <div [id]="'retry-feedback-' + retryMessage.orderId" class="alert" [class.alert-success]="retryMessage.kind === 'success'" [class.alert-warning]="retryMessage.kind === 'warning'" [class.alert-danger]="retryMessage.kind === 'error'" [attr.role]="retryMessage.kind === 'error' ? 'alert' : 'status'">
+    <div [id]="'retry-feedback-' + retryMessage.orderId" class="alert notification" [class.notification--leaving]="retryMessageDismissing" [class.alert-success]="retryMessage.kind === 'success'" [class.alert-warning]="retryMessage.kind === 'warning'" [class.alert-danger]="retryMessage.kind === 'error'" [attr.role]="retryMessage.kind === 'error' ? 'alert' : 'status'">
       {{ retryMessage.text }}
+      @if (transientRetryMessage) {
+        <button type="button" class="btn-close" [attr.aria-label]="'Cerrar aviso de la orden #' + retryMessage.orderId" (click)="dismissRetryNotice()"></button>
+      }
+    </div>
+  }
+
+  @if (refreshNotice) {
+    <div class="alert alert-success notification" [class.notification--leaving]="refreshNoticeDismissing" role="status">
+      Listado de órdenes actualizado
+      <button type="button" class="btn-close" aria-label="Cerrar aviso de actualización" (click)="dismissRefreshNotice()"></button>
     </div>
   }
 
@@ -82,7 +92,15 @@
             <tbody>
               @for (order of orders; track order.id) {
                 <tr [class.orders-table__error]="order.dispatch_status === 'error'">
-                  <th scope="row">#{{ order.id }}</th>
+                  <th scope="row">
+                    #{{ order.id }}
+                    <button #detailButton type="button" class="order-detail-button" [attr.aria-label]="'Ver detalle de la orden #' + order.id" (click)="openDetail(order.id, detailButton)">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z" />
+                        <circle cx="12" cy="12" r="2.5" />
+                      </svg>
+                    </button>
+                  </th>
                   <td>{{ order.restaurant.name }}</td>
                   <td>{{ order.order_type === 'pickup' ? 'Retiro' : 'Delivery' }}</td>
                   <td>{{ formatAmount(order.total_amount) }}</td>
@@ -115,4 +133,7 @@
     }
     <p class="orders-card__footer">Horario de Santiago · Montos en CLP</p>
   </section>
+  @if (selectedOrderId !== null) {
+    <app-order-detail-modal [orderId]="selectedOrderId" (closed)="closeDetail()" />
+  }
 </main>

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { OrdersResponse, RetryDispatchResponse } from '../models/order.model';
+import { OrderDetailResponse, OrdersResponse, RetryDispatchResponse } from '../models/order.model';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersService {
@@ -9,6 +9,10 @@ export class OrdersService {
 
   getOrders(): Observable<OrdersResponse> {
     return this.http.get<OrdersResponse>('/api/v1/orders');
+  }
+
+  getOrder(id: number): Observable<OrderDetailResponse> {
+    return this.http.get<OrderDetailResponse>(`/api/v1/orders/${id}`);
   }
 
   retryDispatch(id: number): Observable<RetryDispatchResponse> {

@@ -1,0 +1,67 @@
+<dialog #dialog class="order-dialog" aria-labelledby="order-detail-title" (close)="onDialogClosed()">
+  <div class="order-dialog__header">
+    <h2 id="order-detail-title">Orden #{{ orderId ?? '—' }}</h2>
+    <button #closeButton type="button" class="btn-close" aria-label="Cerrar detalle de la orden" (click)="close()"></button>
+  </div>
+
+  <div class="order-dialog__body">
+    @if (isLoading) {
+      <p class="loading" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando detalle de la orden…</p>
+    } @else if (errorMessage) {
+      <div class="alert alert-danger" role="alert">
+        {{ errorMessage }}
+        @if (errorKind === 'connection') {
+          <button type="button" class="btn btn-outline-danger ms-2" (click)="loadDetail()">Volver a intentar</button>
+        }
+      </div>
+    } @else if (detail; as order) {
+      <section aria-label="Información de la orden">
+        <dl class="detail-grid">
+          <div><dt>Restaurante</dt><dd>{{ order.restaurant.name }}</dd></div>
+          <div><dt>Tipo de pedido</dt><dd>{{ order.order_type === 'pickup' ? 'Retiro' : 'Delivery' }}</dd></div>
+          <div><dt>Fecha y hora</dt><dd>{{ formatDate(order.created_at) }}</dd></div>
+          <div><dt>Estado</dt><dd><span class="status" [class.status--pending]="order.dispatch_status === 'pending'" [class.status--sent]="order.dispatch_status === 'sent'" [class.status--error]="order.dispatch_status === 'error'">
+            <span class="status__dot" aria-hidden="true"></span>
+            @switch (order.dispatch_status) {
+              @case ('pending') { Pendiente }
+              @case ('sent') { Enviada a tienda }
+              @case ('error') { Error de envío }
+            }
+          </span></dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="customer-title">
+        <h3 id="customer-title">Cliente</h3>
+        <dl class="detail-grid">
+          <div><dt>Nombre</dt><dd>{{ order.customer?.name || 'No disponible' }}</dd></div>
+          <div><dt>Teléfono</dt><dd>{{ order.customer?.phone || 'No disponible' }}</dd></div>
+          @if (order.order_type === 'delivery') {
+            <div><dt>Dirección de entrega</dt><dd>{{ order.delivery_address || 'No disponible' }}</dd></div>
+          }
+        </dl>
+      </section>
+
+      <section aria-labelledby="items-title">
+        <h3 id="items-title">Productos</h3>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead><tr><th scope="col">Producto</th><th scope="col">Cantidad</th><th scope="col">Precio unitario</th><th scope="col">Subtotal</th></tr></thead>
+            <tbody>
+              @for (item of order.items; track item.id) {
+                <tr><th scope="row">{{ item.product_name }}<small class="d-block text-body-secondary fw-normal">SKU: {{ item.sku }}</small></th><td>{{ item.quantity }}</td><td>{{ formatAmount(item.unit_price) }}</td><td>{{ formatAmount(item.subtotal) }}</td></tr>
+              } @empty {
+                <tr><td colspan="4">No hay productos registrados</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="order-total">Total de la orden: <strong>{{ formatAmount(order.total_amount) }}</strong></p>
+      </section>
+    }
+  </div>
+
+  <div class="order-dialog__footer">
+    <button type="button" class="btn btn-dark" (click)="close()">Cerrar</button>
+  </div>
+</dialog>

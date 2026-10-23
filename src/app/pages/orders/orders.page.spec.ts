@@ -1,7 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
-import { ComponentFixture } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Order } from '../../models/order.model';
 import { OrdersPage } from './orders.page';
 
@@ -50,7 +49,7 @@ describe('OrdersPage', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(Array.from(element.querySelectorAll('.stat-card strong')).map((node) => node.textContent)).toEqual(['3', '1', '1', '1']);
-    expect(Array.from(element.querySelectorAll('tbody th')).map((node) => node.textContent)).toEqual(['#8', '#7', '#6']);
+    expect(Array.from(element.querySelectorAll('tbody th')).map((node) => node.textContent?.trim())).toEqual(['#8', '#7', '#6']);
     expect(element.textContent).toContain('Retiro');
     expect(element.textContent).toContain('Delivery');
     expect(element.textContent).toContain('Enviada a tienda');
@@ -63,6 +62,7 @@ describe('OrdersPage', () => {
     expect(fixture.componentInstance.formatDate('2026-01-15T12:00:00Z')).toContain('09:00');
     expect(fixture.componentInstance.formatDate('2026-07-15T12:00:00Z')).toContain('08:00');
     expect(element.textContent).toContain('Última actualización:');
+    expect(element.textContent).not.toContain('Listado de órdenes actualizado');
   });
 
   it('shows zero counts and an empty message when no orders are returned', () => {
@@ -120,6 +120,7 @@ describe('OrdersPage', () => {
     fixture.detectChanges();
     expect(element.textContent).not.toContain('No se pudieron actualizar');
     expect(element.textContent).toContain('No hay órdenes registradas');
+    expect(element.textContent).toContain('Listado de órdenes actualizado');
   });
 
   it('renders retry actions only for pending and error orders', () => {
@@ -172,6 +173,132 @@ describe('OrdersPage', () => {
     expect(fixture.componentInstance.lastUpdated).toBe(previousTime);
     fixture.componentInstance.retryDispatch(6);
     http.expectOne('/api/v1/orders/6/retry_dispatch').flush({ data: { id: 6, dispatch_status: 'sent' } });
+  });
+
+  it('fades out the failed dispatch notice after five seconds, without changing the order state', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.retryDispatch(6);
+      http.expectOne('/api/v1/orders/6/retry_dispatch').flush({ data: { id: 6, dispatch_status: 'error' } });
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-6')?.textContent).toContain('No se pudo enviar la orden #6');
+      expect(element.querySelector('#retry-feedback-6 .btn-close')?.getAttribute('aria-label')).toContain('#6');
+      vi.advanceTimersByTime(4999);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-6')).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-6')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(249);
+      expect(element.querySelector('#retry-feedback-6')).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-6')).toBeNull();
+      expect(element.querySelector('tbody tr:nth-child(3)')?.textContent).toContain('Error de envío');
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('allows manually dismissing the failed dispatch notice with a fade', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.retryDispatch(7);
+      http.expectOne('/api/v1/orders/7/retry_dispatch').flush({ data: { id: 7, dispatch_status: 'error' } });
+      fixture.detectChanges();
+      const close = element.querySelector('#retry-feedback-7 .btn-close');
+      if (!(close instanceof HTMLButtonElement)) throw new Error('Missing notification close button');
+      close.click();
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')).toBeNull();
+      vi.advanceTimersByTime(5000);
+      expect(element.querySelector('#retry-feedback-7')).toBeNull();
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows a green notice only after a successful manual refresh, then fades it out', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.textContent).not.toContain('Listado de órdenes actualizado');
+      const refreshButton = element.querySelector('.refresh-button');
+      if (!(refreshButton instanceof HTMLButtonElement)) throw new Error('Missing refresh button');
+      refreshButton.click();
+      fixture.detectChanges();
+      expect(element.textContent).not.toContain('Listado de órdenes actualizado');
+      http.expectOne('/api/v1/orders').flush({ data: orders });
+      fixture.detectChanges();
+      const notice = element.querySelector('.alert-success.notification');
+      expect(notice?.textContent).toContain('Listado de órdenes actualizado');
+      expect(notice?.getAttribute('role')).toBe('status');
+      vi.advanceTimersByTime(5000);
+      fixture.detectChanges();
+      expect(notice?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.textContent).not.toContain('Listado de órdenes actualizado');
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('allows closing the green notice manually without affecting the list', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      const originalOrders = fixture.componentInstance.orders;
+      const refreshButton = element.querySelector('.refresh-button');
+      if (!(refreshButton instanceof HTMLButtonElement)) throw new Error('Missing refresh button');
+      refreshButton.click();
+      http.expectOne('/api/v1/orders').flush({ data: orders });
+      fixture.detectChanges();
+      const close = element.querySelector('.alert-success.notification .btn-close');
+      if (!(close instanceof HTMLButtonElement)) throw new Error('Missing notification close button');
+      close.click();
+      fixture.detectChanges();
+      expect(element.querySelector('.alert-success.notification')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('.alert-success.notification')).toBeNull();
+      expect(fixture.componentInstance.orders).toBe(originalOrders);
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not announce an update after a failed manual refresh or an automatic 409 sync', () => {
+    const fixture = loadedPage();
+    const element = fixture.nativeElement as HTMLElement;
+    const refreshButton = element.querySelector('.refresh-button');
+    if (!(refreshButton instanceof HTMLButtonElement)) throw new Error('Missing refresh button');
+    refreshButton.click();
+    http.expectOne('/api/v1/orders').flush('', { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    expect(element.textContent).not.toContain('Listado de órdenes actualizado');
+    fixture.componentInstance.retryDispatch(7);
+    http.expectOne('/api/v1/orders/7/retry_dispatch').flush('', { status: 409, statusText: 'Conflict' });
+    http.expectOne('/api/v1/orders').flush({ data: orders });
+    fixture.detectChanges();
+    expect(element.textContent).not.toContain('Listado de órdenes actualizado');
   });
 
   it('synchronizes after 409 and holds all actions until the list responds', () => {
@@ -270,5 +397,79 @@ describe('OrdersPage', () => {
     fixture.componentInstance.retryDispatch(999);
     expect(http.match('/api/v1/orders/8/retry_dispatch')).toHaveLength(0);
     expect(http.match('/api/v1/orders/999/retry_dispatch')).toHaveLength(0);
+  });
+
+  it('opens the selected order from its ID, restores focus and preserves the list on reopening', () => {
+    const showDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal');
+    const closeDescriptor = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
+    const previousOverflow = document.body.style.overflow;
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true, value: function (this: HTMLDialogElement): void { this.setAttribute('open', ''); },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+      configurable: true, value: function (this: HTMLDialogElement): void {
+        this.removeAttribute('open');
+        this.dispatchEvent(new Event('close'));
+      },
+    });
+
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      const previousOrders = fixture.componentInstance.orders;
+      const previousCounts = fixture.componentInstance.counts;
+      const previousTime = fixture.componentInstance.lastUpdated;
+      const tableWrapper = element.querySelector('.table-responsive');
+      if (!(tableWrapper instanceof HTMLElement)) throw new Error('Missing table wrapper');
+      tableWrapper.scrollTop = 42;
+      const first = element.querySelector('tbody tr:nth-child(2) .order-detail-button');
+      if (!(first instanceof HTMLButtonElement)) throw new Error('Missing first order button');
+      expect(first.getAttribute('aria-label')).toBe('Ver detalle de la orden #7');
+      expect(first.querySelector('svg')).not.toBeNull();
+      expect(first.textContent?.trim()).toBe('');
+      const orderNumber = first.closest('th');
+      expect(orderNumber?.textContent?.trim()).toBe('#7');
+      orderNumber?.click();
+      fixture.detectChanges();
+      expect(element.querySelector('dialog')).toBeNull();
+      first.focus();
+      first.click();
+      fixture.detectChanges();
+      expect(element.querySelector('#order-detail-title')?.textContent).toContain('Orden #7');
+      const firstRequest = http.expectOne('/api/v1/orders/7');
+      expect(document.body.style.overflow).toBe('hidden');
+      const close = element.querySelector('dialog .order-dialog__footer button');
+      if (!(close instanceof HTMLButtonElement)) throw new Error('Missing close button');
+      close.click();
+      fixture.detectChanges();
+      expect(firstRequest.cancelled).toBe(true);
+      expect(document.activeElement).toBe(first);
+      expect(document.body.style.overflow).toBe(previousOverflow);
+      expect(tableWrapper.scrollTop).toBe(42);
+
+      const second = element.querySelector('tbody tr:first-child .order-detail-button');
+      if (!(second instanceof HTMLButtonElement)) throw new Error('Missing second order button');
+      second.click();
+      fixture.detectChanges();
+      expect(element.querySelector('#order-detail-title')?.textContent).toContain('Orden #8');
+      expect(element.textContent).not.toContain('Cargando detalle de la orden #7');
+      http.expectOne('/api/v1/orders/8').flush({ data: {
+        ...orders[0], customer: { name: 'Client 8', phone: '+56000000000' }, items: [],
+      } });
+      fixture.detectChanges();
+      expect(element.textContent).toContain('Client 8');
+      expect(fixture.componentInstance.orders).toBe(previousOrders);
+      expect(fixture.componentInstance.counts).toBe(previousCounts);
+      expect(fixture.componentInstance.lastUpdated).toBe(previousTime);
+      expect(tableWrapper.scrollTop).toBe(42);
+    } finally {
+      fixture?.destroy();
+      document.body.style.overflow = previousOverflow;
+      if (showDescriptor) Object.defineProperty(HTMLDialogElement.prototype, 'showModal', showDescriptor);
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal');
+      if (closeDescriptor) Object.defineProperty(HTMLDialogElement.prototype, 'close', closeDescriptor);
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, 'close');
+    }
   });
 });

@@ -1,16 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, finalize, map, of } from 'rxjs';
+import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { Order } from '../../models/order.model';
 import { OrdersService } from '../../services/orders.service';
 
 @Component({
   selector: 'app-orders-page',
+  imports: [OrderDetailModal],
   templateUrl: './orders.page.html',
   styleUrl: './orders.page.scss',
 })
-export class OrdersPage implements OnInit {
+export class OrdersPage implements OnInit, OnDestroy {
   private readonly ordersService = inject(OrdersService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly moneyFormatter = new Intl.NumberFormat('es-CL', {
@@ -42,14 +44,41 @@ export class OrdersPage implements OnInit {
   retryingOrderId: number | null = null;
   blockedOrderIds = new Set<number>();
   retryMessage: { orderId: number; text: string; kind: 'success' | 'warning' | 'error' } | null = null;
+  transientRetryMessage = false;
+  retryMessageDismissing = false;
+  refreshNotice = false;
+  refreshNoticeDismissing = false;
+  private retryNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryFadeTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshFadeTimer: ReturnType<typeof setTimeout> | null = null;
+  selectedOrderId: number | null = null;
+  private detailOrigin: HTMLButtonElement | null = null;
 
   ngOnInit(): void {
     this.refresh();
   }
 
-  refresh(): void {
+  ngOnDestroy(): void {
+    this.clearRetryNoticeTimers();
+    this.clearRefreshNoticeTimers();
+  }
+
+  openDetail(id: number, origin: HTMLButtonElement): void {
+    this.detailOrigin = origin;
+    this.selectedOrderId = id;
+  }
+
+  closeDetail(): void {
+    this.selectedOrderId = null;
+    this.detailOrigin?.focus({ preventScroll: true });
+    this.detailOrigin = null;
+  }
+
+  refresh(showSuccessNotice = false): void {
     if (this.isLoading || this.retryingOrderId !== null) return;
 
+    if (showSuccessNotice) this.clearRefreshNotice();
     this.isLoading = true;
     this.errorMessage = null;
     this.ordersService.getOrders().pipe(
@@ -59,8 +88,9 @@ export class OrdersPage implements OnInit {
       next: ({ data }) => {
         this.setOrders(data);
         this.blockedOrderIds.clear();
-        this.retryMessage = null;
+        this.clearRetryNotice();
         this.lastUpdated = new Date();
+        if (showSuccessNotice) this.showRefreshNotice();
       },
       error: () => {
         this.errorMessage = this.orders === null
@@ -77,7 +107,7 @@ export class OrdersPage implements OnInit {
         !currentOrders || !current || current.dispatch_status === 'sent') return;
 
     this.retryingOrderId = id;
-    this.retryMessage = null;
+    this.clearRetryNotice();
     this.ordersService.retryDispatch(id).pipe(
       map((response) => ({ kind: 'retry' as const, response })),
       catchError((error: unknown) => {
@@ -106,6 +136,10 @@ export class OrdersPage implements OnInit {
               : `No se pudo enviar la orden #${id}. Puedes volver a intentarlo`,
             kind: updated.dispatch_status === 'sent' ? 'success' : 'warning',
           };
+          if (updated.dispatch_status === 'error') {
+            this.transientRetryMessage = true;
+            this.retryNoticeTimer = setTimeout(() => this.dismissRetryNotice(), 5000);
+          }
           break;
         }
         case 'conflict':
@@ -123,6 +157,53 @@ export class OrdersPage implements OnInit {
           break;
       }
     });
+  }
+
+  dismissRetryNotice(): void {
+    if (!this.retryMessage || this.retryMessageDismissing) return;
+    this.clearRetryNoticeTimers();
+    this.retryMessageDismissing = true;
+    this.retryFadeTimer = setTimeout(() => this.clearRetryNotice(), 250);
+  }
+
+  dismissRefreshNotice(): void {
+    if (!this.refreshNotice || this.refreshNoticeDismissing) return;
+    this.clearRefreshNoticeTimers();
+    this.refreshNoticeDismissing = true;
+    this.refreshFadeTimer = setTimeout(() => this.clearRefreshNotice(), 250);
+  }
+
+  private showRefreshNotice(): void {
+    this.clearRefreshNotice();
+    this.refreshNotice = true;
+    this.refreshNoticeTimer = setTimeout(() => this.dismissRefreshNotice(), 5000);
+  }
+
+  private clearRetryNotice(): void {
+    this.clearRetryNoticeTimers();
+    this.retryMessage = null;
+    this.transientRetryMessage = false;
+    this.retryMessageDismissing = false;
+  }
+
+  private clearRefreshNotice(): void {
+    this.clearRefreshNoticeTimers();
+    this.refreshNotice = false;
+    this.refreshNoticeDismissing = false;
+  }
+
+  private clearRetryNoticeTimers(): void {
+    if (this.retryNoticeTimer !== null) clearTimeout(this.retryNoticeTimer);
+    if (this.retryFadeTimer !== null) clearTimeout(this.retryFadeTimer);
+    this.retryNoticeTimer = null;
+    this.retryFadeTimer = null;
+  }
+
+  private clearRefreshNoticeTimers(): void {
+    if (this.refreshNoticeTimer !== null) clearTimeout(this.refreshNoticeTimer);
+    if (this.refreshFadeTimer !== null) clearTimeout(this.refreshFadeTimer);
+    this.refreshNoticeTimer = null;
+    this.refreshFadeTimer = null;
   }
 
   private setOrders(data: Order[]): void {

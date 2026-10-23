@@ -28,3 +28,31 @@ export interface RetryDispatchOrder extends Partial<Omit<Order, 'id' | 'dispatch
 export interface RetryDispatchResponse {
   data: RetryDispatchOrder;
 }
+
+export interface OrderCustomer {
+  name: string | null;
+  phone: string | null;
+}
+
+export interface OrderItem {
+  id: number;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+}
+
+export interface OrderDetail extends Order {
+  client_total_amount?: number | null;
+  customer?: OrderCustomer | null;
+  delivery_address?: string | null;
+  dispatched_at?: string | null;
+  last_dispatch_error?: string | null;
+  items: OrderItem[];
+}
+
+export interface OrderDetailResponse {
+  data: OrderDetail;
+}

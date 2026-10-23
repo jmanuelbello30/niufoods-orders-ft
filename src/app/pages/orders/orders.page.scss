@@ -65,6 +65,23 @@
   margin-bottom: 16px;
 }
 
+.notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  opacity: 1;
+  transition: opacity 250ms ease-out;
+
+  .btn-close:focus { box-shadow: none; }
+}
+
+.notification--leaving { opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .notification { transition: none; }
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -150,6 +167,24 @@
 
 .retry-button {
   white-space: nowrap;
+}
+
+.order-detail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: 32px;
+  height: 32px;
+  margin-left: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #111;
+
+  svg { width: 20px; height: 20px; }
+  &:hover { color: #c9001e; background: #fff0f2; }
 }
 
 .status {

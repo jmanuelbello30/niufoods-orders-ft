@@ -22,11 +22,15 @@ Abrir `http://localhost:4200/` en el navegador. La ruta inicial consulta `GET /a
 
 Los contadores se calculan a partir del listado completo recibido y mantienen el orden de la respuesta. Los totales se muestran en CLP sin dividir por 100; las fechas y la hora de actualización exitosa se muestran en horario `America/Santiago`, incluidos los cambios de horario. El botón **Actualizar** hace una consulta manual sin superponer solicitudes. Una carga inicial muestra un indicador y no presenta ceros hasta obtener datos; una respuesta vacía muestra ceros y un mensaje. Ante un error inicial se puede volver a intentar; si falla una actualización, permanecen los últimos datos y su hora con un aviso.
 
+Una actualización manual exitosa muestra “Listado de órdenes actualizado” en verde; la carga inicial no muestra ese aviso. Cuando un reintento devuelve el estado de error, “No se pudo enviar la orden…” puede cerrarse con la X o desaparece tras cinco segundos con una transición suave. Los avisos sobre resultados no confirmados permanecen visibles para que se pueda actualizar el listado.
+
 El logo mostrado es el archivo original `public/images/niu-foods-logo.jpg`. No existe `public/images/niu-foods-logo.png` en este proyecto.
 
 Las órdenes pendientes o con error tienen **Reintentar envío**. La acción envía `POST /api/v1/orders/:id/retry_dispatch` con cuerpo `{}`. Solo se permite un reintento en curso y se bloquean temporalmente las demás acciones. El estado de la fila y los contadores se actualizan según la respuesta, no solo por recibir HTTP 200; la hora de actualización del listado no cambia por el POST. Ante HTTP 409 se informa que la orden ya fue enviada y se vuelve a consultar el listado. Si esa sincronización falla, o si el resultado del POST no puede confirmarse, la fila conserva sus datos y queda bloqueada para otro reintento hasta consultar el listado con éxito. **Actualizar** sigue disponible después de esos errores; no hay reintentos automáticos.
 
-Este incremento no incluye filtros, búsqueda, paginación, detalle, actualización automática, exportación, ventas acumuladas ni autenticación.
+Al pulsar el icono de ojo junto al número de una orden se abre un diálogo con el detalle consultado mediante `GET /api/v1/orders/:id`: cliente, productos y precios históricos y total persistido. Puede cerrarse incluso durante la carga con **Cerrar**, el botón superior o Escape; al cerrar se recuperan el foco y el desplazamiento del listado. Si falla la conexión, el diálogo ofrece **Volver a intentar** sin modificar el dashboard.
+
+Este incremento no incluye edición ni creación de órdenes, filtros, búsqueda, paginación, rutas de detalle, actualización automática, exportación, ventas acumuladas ni autenticación.
 
 ## Estructura y convenciones
 
@@ -46,6 +50,8 @@ curl.exe -i http://localhost:4200/api/v1/orders
 ```
 
 Debe devolver una respuesta HTTP 200 con `data` del backend; si falla, comprobar primero `http://localhost:3000/api/v1/orders` desde Windows. Para comprobar la interfaz, abrir la página tanto en escritorio como en un viewport móvil, revisar tarjetas y desplazamiento horizontal de la tabla y pulsar **Actualizar**.
+
+Para comprobar el detalle sin modificar órdenes: pulsar el ojo junto a un número en el listado, revisar el contenido del diálogo y cerrarlo tanto con **Cerrar** como con Escape. Verificar en navegador que el foco regresa al ojo, que el fondo no se desplaza mientras está abierto y que el modal se adapta al móvil. El detalle también puede consultarse mediante `curl.exe -i http://localhost:3000/api/v1/orders/8` (GET solamente).
 
 Para comprobar manualmente el reintento, usar **solo una orden de prueba autorizada** en estado pendiente o con error: pulsar **Reintentar envío** una vez y revisar el mensaje, estado y contadores. Un reintento puede despachar realmente la orden; las pruebas automatizadas usan `HttpTestingController` y no envían POST al backend. Para observar un 409 o un fallo de red sin afectar órdenes reales, usar un entorno de prueba controlado.
 

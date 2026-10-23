@@ -1,0 +1,71 @@
+.order-dialog {
+  position: fixed;
+  width: min(900px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(90dvh, 900px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #e2e6eb;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
+  color: #111;
+}
+
+.order-dialog::backdrop { background: rgb(0 0 0 / 60%); }
+
+.order-dialog__header, .order-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #fff;
+}
+
+.order-dialog__header { border-bottom: 1px solid #e2e6eb; }
+.order-dialog__header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.order-dialog__header .btn-close:focus { box-shadow: none; opacity: 1; }
+.order-dialog__header .btn-close:focus-visible { outline: 3px solid #d90020; outline-offset: 3px; }
+.order-dialog__footer { justify-content: flex-end; border-top: 1px solid #e2e6eb; }
+
+.order-dialog__body {
+  overflow-y: auto;
+  max-height: calc(min(90dvh, 900px) - 130px);
+  padding: 20px 24px;
+}
+
+section + section { margin-top: 24px; }
+h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+
+  dt { color: #586170; font-weight: 500; }
+  dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+}
+
+.loading { display: flex; align-items: center; gap: 10px; }
+.table { min-width: 550px; }
+.order-total { text-align: right; margin: 16px 0 0; }
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 30px;
+  padding: 4px 10px;
+  font-weight: 600;
+}
+.status__dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.status--pending { color: #785400; background: #fff2cc; }
+.status--sent { color: #08733b; background: #dbfae5; }
+.status--error { color: #be0020; background: #ffe0e4; }
+
+@media (max-width: 600px) {
+  .order-dialog { width: calc(100vw - 16px); max-height: 95dvh; }
+  .order-dialog__header, .order-dialog__footer { padding: 14px 16px; }
+  .order-dialog__body { padding: 16px; max-height: calc(95dvh - 120px); }
+  .detail-grid { grid-template-columns: 1fr; }
+}
