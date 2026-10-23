@@ -19,12 +19,14 @@
   </div>
 
   @if (errorMessage) {
-    <div class="alert alert-danger" role="alert">
+    <div class="alert alert-danger" [class.notification]="orders !== null" [class.notification--leaving]="errorMessageDismissing" role="alert">
       {{ errorMessage }}
       @if (orders === null) {
         <button type="button" class="btn btn-outline-danger ms-2" (click)="refresh()" [disabled]="isLoading">
           Volver a intentar
         </button>
+      } @else {
+        <button type="button" class="btn-close" aria-label="Cerrar aviso de actualización fallida" (click)="dismissErrorNotice()"></button>
       }
     </div>
   }

@@ -40,6 +40,9 @@ export class OrdersPage implements OnInit, OnDestroy {
   counts = { total: 0, pending: 0, sent: 0, error: 0 };
   isLoading = false;
   errorMessage: string | null = null;
+  errorMessageDismissing = false;
+  private errorNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+  private errorFadeTimer: ReturnType<typeof setTimeout> | null = null;
   lastUpdated: Date | null = null;
   retryingOrderId: number | null = null;
   blockedOrderIds = new Set<number>();
@@ -60,6 +63,7 @@ export class OrdersPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearErrorNoticeTimers();
     this.clearRetryNoticeTimers();
     this.clearRefreshNoticeTimers();
   }
@@ -80,7 +84,7 @@ export class OrdersPage implements OnInit, OnDestroy {
 
     if (showSuccessNotice) this.clearRefreshNotice();
     this.isLoading = true;
-    this.errorMessage = null;
+    this.clearErrorNotice();
     this.ordersService.getOrders().pipe(
       finalize(() => this.isLoading = false),
       takeUntilDestroyed(this.destroyRef),
@@ -96,6 +100,9 @@ export class OrdersPage implements OnInit, OnDestroy {
         this.errorMessage = this.orders === null
           ? 'No se pudieron cargar las órdenes. Intenta nuevamente.'
           : 'No se pudieron actualizar las órdenes. Se muestran los últimos datos disponibles.';
+        if (this.orders !== null) {
+          this.errorNoticeTimer = setTimeout(() => this.dismissErrorNotice(), 5000);
+        }
       },
     });
   }
@@ -154,6 +161,8 @@ export class OrdersPage implements OnInit, OnDestroy {
         case 'failure':
           this.blockedOrderIds.add(id);
           this.retryMessage = { orderId: id, text: `No se pudo confirmar el resultado de la orden #${id}. Pulsa Actualizar antes de volver a intentarlo.`, kind: 'error' };
+          this.transientRetryMessage = true;
+          this.retryNoticeTimer = setTimeout(() => this.dismissRetryNotice(), 5000);
           break;
       }
     });
@@ -164,6 +173,13 @@ export class OrdersPage implements OnInit, OnDestroy {
     this.clearRetryNoticeTimers();
     this.retryMessageDismissing = true;
     this.retryFadeTimer = setTimeout(() => this.clearRetryNotice(), 250);
+  }
+
+  dismissErrorNotice(): void {
+    if (!this.errorMessage || this.errorMessageDismissing || this.orders === null) return;
+    this.clearErrorNoticeTimers();
+    this.errorMessageDismissing = true;
+    this.errorFadeTimer = setTimeout(() => this.clearErrorNotice(), 250);
   }
 
   dismissRefreshNotice(): void {
@@ -186,6 +202,12 @@ export class OrdersPage implements OnInit, OnDestroy {
     this.retryMessageDismissing = false;
   }
 
+  private clearErrorNotice(): void {
+    this.clearErrorNoticeTimers();
+    this.errorMessage = null;
+    this.errorMessageDismissing = false;
+  }
+
   private clearRefreshNotice(): void {
     this.clearRefreshNoticeTimers();
     this.refreshNotice = false;
@@ -197,6 +219,13 @@ export class OrdersPage implements OnInit, OnDestroy {
     if (this.retryFadeTimer !== null) clearTimeout(this.retryFadeTimer);
     this.retryNoticeTimer = null;
     this.retryFadeTimer = null;
+  }
+
+  private clearErrorNoticeTimers(): void {
+    if (this.errorNoticeTimer !== null) clearTimeout(this.errorNoticeTimer);
+    if (this.errorFadeTimer !== null) clearTimeout(this.errorFadeTimer);
+    this.errorNoticeTimer = null;
+    this.errorFadeTimer = null;
   }
 
   private clearRefreshNoticeTimers(): void {

@@ -22,7 +22,7 @@ Abrir `http://localhost:4200/` en el navegador. La ruta inicial consulta `GET /a
 
 Los contadores se calculan a partir del listado completo recibido y mantienen el orden de la respuesta. Los totales se muestran en CLP sin dividir por 100; las fechas y la hora de actualización exitosa se muestran en horario `America/Santiago`, incluidos los cambios de horario. El botón **Actualizar** hace una consulta manual sin superponer solicitudes. Una carga inicial muestra un indicador y no presenta ceros hasta obtener datos; una respuesta vacía muestra ceros y un mensaje. Ante un error inicial se puede volver a intentar; si falla una actualización, permanecen los últimos datos y su hora con un aviso.
 
-Una actualización manual exitosa muestra “Listado de órdenes actualizado” en verde; la carga inicial no muestra ese aviso. Cuando un reintento devuelve el estado de error, “No se pudo enviar la orden…” puede cerrarse con la X o desaparece tras cinco segundos con una transición suave. Los avisos sobre resultados no confirmados permanecen visibles para que se pueda actualizar el listado.
+Una actualización manual exitosa muestra “Listado de órdenes actualizado” en verde; la carga inicial no muestra ese aviso. Los avisos de actualización fallida, despacho fallido o resultado de despacho no confirmado pueden cerrarse con la X o desaparecen tras cinco segundos con una transición suave. Ocultar un aviso de resultado no confirmado no habilita otro reintento de esa orden: primero hay que actualizar el listado con éxito.
 
 El logo mostrado es el archivo original `public/images/niu-foods-logo.jpg`. No existe `public/images/niu-foods-logo.png` en este proyecto.
 

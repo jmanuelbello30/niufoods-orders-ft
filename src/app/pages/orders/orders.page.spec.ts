@@ -83,6 +83,7 @@ describe('OrdersPage', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).toContain('No se pudieron cargar');
+    expect(element.querySelector('.alert-danger .btn-close')).toBeNull();
     expect(element.querySelector('.stat-card strong')?.textContent).toBe('—');
     expect(fixture.componentInstance.lastUpdated).toBeNull();
     expect(fixture.componentInstance.isLoading).toBe(false);
@@ -121,6 +122,66 @@ describe('OrdersPage', () => {
     expect(element.textContent).not.toContain('No se pudieron actualizar');
     expect(element.textContent).toContain('No hay órdenes registradas');
     expect(element.textContent).toContain('Listado de órdenes actualizado');
+  });
+
+  it('fades out the failed list update after five seconds without changing its data', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      const previousOrders = fixture.componentInstance.orders;
+      const previousTime = fixture.componentInstance.lastUpdated;
+      const refreshButton = element.querySelector('.refresh-button');
+      if (!(refreshButton instanceof HTMLButtonElement)) throw new Error('Missing refresh button');
+      refreshButton.click();
+      http.expectOne('/api/v1/orders').flush('', { status: 503, statusText: 'Unavailable' });
+      fixture.detectChanges();
+      const notice = element.querySelector('.alert-danger.notification');
+      expect(notice?.textContent).toContain('No se pudieron actualizar las órdenes. Se muestran los últimos datos disponibles.');
+      expect(notice?.querySelector('.btn-close')?.getAttribute('aria-label')).toBe('Cerrar aviso de actualización fallida');
+      vi.advanceTimersByTime(4999);
+      fixture.detectChanges();
+      expect(element.querySelector('.alert-danger.notification')).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      fixture.detectChanges();
+      expect(notice?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('.alert-danger.notification')).toBeNull();
+      expect(fixture.componentInstance.orders).toBe(previousOrders);
+      expect(fixture.componentInstance.lastUpdated).toBe(previousTime);
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets the user close the failed list update before five seconds', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      const refreshButton = element.querySelector('.refresh-button');
+      if (!(refreshButton instanceof HTMLButtonElement)) throw new Error('Missing refresh button');
+      refreshButton.click();
+      http.expectOne('/api/v1/orders').flush('', { status: 503, statusText: 'Unavailable' });
+      fixture.detectChanges();
+      const close = element.querySelector('.alert-danger.notification .btn-close');
+      if (!(close instanceof HTMLButtonElement)) throw new Error('Missing notification close button');
+      close.click();
+      fixture.detectChanges();
+      expect(element.querySelector('.alert-danger.notification')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('.alert-danger.notification')).toBeNull();
+      vi.advanceTimersByTime(5000);
+      expect(element.querySelector('.alert-danger.notification')).toBeNull();
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
   });
 
   it('renders retry actions only for pending and error orders', () => {
@@ -366,6 +427,59 @@ describe('OrdersPage', () => {
     expect(fixture.componentInstance.blockedOrderIds.size).toBe(0);
     fixture.componentInstance.retryDispatch(7);
     http.expectOne('/api/v1/orders/7/retry_dispatch').flush({ data: { id: 7, dispatch_status: 'sent' } });
+  });
+
+  it('fades out the uncertain retry notice after five seconds but keeps that order blocked', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.retryDispatch(7);
+      http.expectOne('/api/v1/orders/7/retry_dispatch').error(new ProgressEvent('error'));
+      fixture.detectChanges();
+      const notice = element.querySelector('#retry-feedback-7');
+      expect(notice?.textContent).toContain('No se pudo confirmar el resultado de la orden #7');
+      expect(notice?.querySelector('.btn-close')?.getAttribute('aria-label')).toContain('#7');
+      vi.advanceTimersByTime(5000);
+      fixture.detectChanges();
+      expect(notice?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')).toBeNull();
+      expect(fixture.componentInstance.blockedOrderIds.has(7)).toBe(true);
+      expect((element.querySelector('tbody tr:nth-child(2) .retry-button') as HTMLButtonElement).disabled).toBe(true);
+      expect((element.querySelector('.refresh-button') as HTMLButtonElement).disabled).toBe(false);
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets the user close the uncertain retry notice without unlocking the order', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.retryDispatch(7);
+      http.expectOne('/api/v1/orders/7/retry_dispatch').flush('', { status: 500, statusText: 'Error' });
+      fixture.detectChanges();
+      const close = element.querySelector('#retry-feedback-7 .btn-close');
+      if (!(close instanceof HTMLButtonElement)) throw new Error('Missing notification close button');
+      close.click();
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')).toBeNull();
+      expect(fixture.componentInstance.blockedOrderIds.has(7)).toBe(true);
+      fixture.componentInstance.retryDispatch(7);
+      expect(http.match('/api/v1/orders/7/retry_dispatch')).toHaveLength(0);
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
   });
 
   it('treats other HTTP errors as uncertain without changing the order', () => {
