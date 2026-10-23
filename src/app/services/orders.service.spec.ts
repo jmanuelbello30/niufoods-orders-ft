@@ -1,7 +1,7 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { OrdersResponse } from './order.model';
+import { OrdersResponse } from '../models/order.model';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
@@ -28,7 +28,11 @@ describe('OrdersService', () => {
 
   it('propagates HTTP errors', () => {
     let status: number | undefined;
-    service.getOrders().subscribe({ error: (error) => status = error.status });
+    service.getOrders().subscribe({
+      error: (error: unknown) => {
+        if (error instanceof HttpErrorResponse) status = error.status;
+      },
+    });
     http.expectOne('/api/v1/orders').flush('Unavailable', { status: 503, statusText: 'Service Unavailable' });
     expect(status).toBe(503);
   });

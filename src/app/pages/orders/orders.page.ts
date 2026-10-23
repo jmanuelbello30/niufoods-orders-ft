@@ -1,7 +1,7 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Order } from './order.model';
-import { OrdersService } from './orders.service';
+import { Order } from '../../models/order.model';
+import { OrdersService } from '../../services/orders.service';
 
 @Component({
   selector: 'app-orders-page',

@@ -1,10 +1,5 @@
 # Reglas del frontend Niu Foods
 
-- Usar Angular standalone con TypeScript strict.
-- Usar propiedades normales y Observables de RxJS; no usar signals.
-- Mantener Zone.js.
-- Colocar HTTP y acceso a datos en servicios; reservar los componentes para presentación e interacción.
-- Usar Bootstrap para los estilos.
-- Evitar dependencias y abstracciones innecesarias.
-- Implementar únicamente el incremento solicitado.
-- No hacer commits, push ni operaciones destructivas.
+- Antes de crear, modificar o revisar código Angular, cargar la skill `angular-best-practices`; si aún no aparece en el catálogo de la sesión, leer directamente `.opencode/skills/angular-best-practices/SKILL.md`.
+- Seguir la estructura, responsabilidades, tipado y convenciones definidos en esa skill. Implementar solo el incremento solicitado.
+- No hacer commits, push, operaciones destructivas ni cambios al backend.

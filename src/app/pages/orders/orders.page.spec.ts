@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Order } from './order.model';
+import { Order } from '../../models/order.model';
 import { OrdersPage } from './orders.page';
 
 const orders: Order[] = [

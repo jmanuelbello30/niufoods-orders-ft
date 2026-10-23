@@ -26,6 +26,15 @@ El logo mostrado es el archivo original `public/images/niu-foods-logo.jpg`. No e
 
 Este incremento no incluye reintentos de despacho, acciones, filtros, búsqueda, paginación, exportación, ventas acumuladas ni autenticación.
 
+## Estructura y convenciones
+
+- `src/app/models/`: contratos de órdenes y restaurantes compartidos.
+- `src/app/services/`: acceso HTTP y pruebas de servicios.
+- `src/app/pages/orders/`: página del dashboard con plantilla, estilos y pruebas junto al componente.
+- `src/app/`: componente raíz, configuración y rutas.
+
+Las convenciones del proyecto están en `AGENTS.md` y en la skill local `.opencode/skills/angular-best-practices/SKILL.md`. El tipado estricto y las pruebas ayudan a detectar problemas, pero el build por sí solo no prohíbe `any` explícito; esta regla también requiere revisión del código.
+
 ## Verificar el proxy
 
 Con el backend y el frontend en ejecución, en otra ventana de PowerShell:
