@@ -8,7 +8,7 @@
       @if (lastUpdated) {
         <span class="last-updated">Última actualización: {{ formatTime(lastUpdated) }}</span>
       }
-      <button type="button" class="refresh-button btn" (click)="refresh()" [disabled]="isLoading">
+      <button type="button" class="refresh-button btn" (click)="refresh()" [disabled]="isLoading || retryingOrderId !== null">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 7v5h-5M4 17v-5h5" />
           <path d="M5.5 9A7 7 0 0 1 18 7l2 5M4 12l2 5a7 7 0 0 0 12.5-2" />
@@ -26,6 +26,12 @@
           Volver a intentar
         </button>
       }
+    </div>
+  }
+
+  @if (retryMessage) {
+    <div [id]="'retry-feedback-' + retryMessage.orderId" class="alert" [class.alert-success]="retryMessage.kind === 'success'" [class.alert-warning]="retryMessage.kind === 'warning'" [class.alert-danger]="retryMessage.kind === 'error'" [attr.role]="retryMessage.kind === 'error' ? 'alert' : 'status'">
+      {{ retryMessage.text }}
     </div>
   }
 
@@ -72,7 +78,7 @@
       } @else {
         <div class="table-responsive">
           <table class="orders-table">
-            <thead><tr><th scope="col">Orden</th><th scope="col">Restaurante</th><th scope="col">Tipo</th><th scope="col">Total</th><th scope="col">Fecha y hora</th><th scope="col">Estado</th></tr></thead>
+            <thead><tr><th scope="col">Orden</th><th scope="col">Restaurante</th><th scope="col">Tipo</th><th scope="col">Total</th><th scope="col">Fecha y hora</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
             <tbody>
               @for (order of orders; track order.id) {
                 <tr [class.orders-table__error]="order.dispatch_status === 'error'">
@@ -90,6 +96,15 @@
                         @case ('error') { Error de envío }
                       }
                     </span>
+                  </td>
+                  <td>
+                    @if (order.dispatch_status === 'sent') {
+                      <span [attr.aria-describedby]="retryMessage?.orderId === order.id ? 'retry-feedback-' + order.id : null">—</span>
+                    } @else {
+                      <button type="button" class="retry-button btn btn-sm btn-outline-danger" (click)="retryDispatch(order.id)" [disabled]="isLoading || retryingOrderId !== null || blockedOrderIds.has(order.id)" [attr.aria-label]="(retryingOrderId === order.id ? 'Reintentando envío de la orden #' : 'Reintentar envío de la orden #') + order.id" [attr.aria-describedby]="retryMessage?.orderId === order.id ? 'retry-feedback-' + order.id : null">
+                        {{ retryingOrderId === order.id ? 'Reintentando…' : 'Reintentar envío' }}
+                      </button>
+                    }
                   </td>
                 </tr>
               }

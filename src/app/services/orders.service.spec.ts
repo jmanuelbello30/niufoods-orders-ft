@@ -1,7 +1,7 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { OrdersResponse } from '../models/order.model';
+import { OrdersResponse, RetryDispatchResponse } from '../models/order.model';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
@@ -35,5 +35,16 @@ describe('OrdersService', () => {
     });
     http.expectOne('/api/v1/orders').flush('Unavailable', { status: 503, statusText: 'Service Unavailable' });
     expect(status).toBe(503);
+  });
+
+  it('posts an empty body and returns the retry response without requiring a restaurant', () => {
+    const response: RetryDispatchResponse = { data: { id: 7, dispatch_status: 'sent', dispatched_at: '2026-10-23T00:11:15Z' } };
+    let result: RetryDispatchResponse | undefined;
+    service.retryDispatch(7).subscribe((value) => result = value);
+    const request = http.expectOne('/api/v1/orders/7/retry_dispatch');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    request.flush(response);
+    expect(result).toEqual(response);
   });
 });

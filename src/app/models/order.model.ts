@@ -17,3 +17,14 @@ export interface Order {
 export interface OrdersResponse {
   data: Order[];
 }
+
+export interface RetryDispatchOrder extends Partial<Omit<Order, 'id' | 'dispatch_status'>> {
+  id: number;
+  dispatch_status: 'sent' | 'error';
+  dispatched_at?: string | null;
+  last_dispatch_error?: string | null;
+}
+
+export interface RetryDispatchResponse {
+  data: RetryDispatchOrder;
+}

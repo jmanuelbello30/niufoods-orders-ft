@@ -1,6 +1,6 @@
 # Órdenes Niu Foods (frontend)
 
-Dashboard de órdenes conectado al backend Rails. Muestra las órdenes recibidas, contadores de total, pendientes, enviadas a tienda y con error, junto con una actualización manual.
+Dashboard de órdenes conectado al backend Rails. Muestra las órdenes recibidas, contadores de total, pendientes, enviadas a tienda y con error, actualización manual y reintento manual de despacho.
 
 ## Requisitos
 
@@ -24,7 +24,9 @@ Los contadores se calculan a partir del listado completo recibido y mantienen el
 
 El logo mostrado es el archivo original `public/images/niu-foods-logo.jpg`. No existe `public/images/niu-foods-logo.png` en este proyecto.
 
-Este incremento no incluye reintentos de despacho, acciones, filtros, búsqueda, paginación, exportación, ventas acumuladas ni autenticación.
+Las órdenes pendientes o con error tienen **Reintentar envío**. La acción envía `POST /api/v1/orders/:id/retry_dispatch` con cuerpo `{}`. Solo se permite un reintento en curso y se bloquean temporalmente las demás acciones. El estado de la fila y los contadores se actualizan según la respuesta, no solo por recibir HTTP 200; la hora de actualización del listado no cambia por el POST. Ante HTTP 409 se informa que la orden ya fue enviada y se vuelve a consultar el listado. Si esa sincronización falla, o si el resultado del POST no puede confirmarse, la fila conserva sus datos y queda bloqueada para otro reintento hasta consultar el listado con éxito. **Actualizar** sigue disponible después de esos errores; no hay reintentos automáticos.
+
+Este incremento no incluye filtros, búsqueda, paginación, detalle, actualización automática, exportación, ventas acumuladas ni autenticación.
 
 ## Estructura y convenciones
 
@@ -44,6 +46,8 @@ curl.exe -i http://localhost:4200/api/v1/orders
 ```
 
 Debe devolver una respuesta HTTP 200 con `data` del backend; si falla, comprobar primero `http://localhost:3000/api/v1/orders` desde Windows. Para comprobar la interfaz, abrir la página tanto en escritorio como en un viewport móvil, revisar tarjetas y desplazamiento horizontal de la tabla y pulsar **Actualizar**.
+
+Para comprobar manualmente el reintento, usar **solo una orden de prueba autorizada** en estado pendiente o con error: pulsar **Reintentar envío** una vez y revisar el mensaje, estado y contadores. Un reintento puede despachar realmente la orden; las pruebas automatizadas usan `HttpTestingController` y no envían POST al backend. Para observar un 409 o un fallo de red sin afectar órdenes reales, usar un entorno de prueba controlado.
 
 ## Build y pruebas
 
