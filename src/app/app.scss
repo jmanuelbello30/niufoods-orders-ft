@@ -1,0 +1,46 @@
+.site-header {
+  background: #050505;
+  color: #fff;
+}
+
+.site-header__inner {
+  max-width: 1440px;
+  min-height: 80px;
+  margin: auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.site-header img {
+  display: block;
+  width: 106px;
+  height: auto;
+}
+
+.site-header__divider {
+  height: 32px;
+  border-left: 1px solid #555;
+}
+
+.site-header__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .site-header__inner {
+    min-height: 68px;
+    gap: 14px;
+    padding: 0 16px;
+  }
+
+  .site-header img {
+    width: 82px;
+  }
+
+  .site-header__title {
+    font-size: 1rem;
+  }
+}

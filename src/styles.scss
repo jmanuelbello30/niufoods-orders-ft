@@ -1,0 +1,11 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+body {
+  background: #f5f7f9;
+  color: #111;
+}
+
+:focus-visible {
+  outline: 3px solid #d90020;
+  outline-offset: 3px;
+}
