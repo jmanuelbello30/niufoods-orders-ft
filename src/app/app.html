@@ -2,8 +2,25 @@
   <div class="site-header__inner">
     <img src="/images/niu-foods-logo.jpg" alt="Niu Foods" width="106" height="76" />
     <span class="site-header__divider" aria-hidden="true"></span>
-    <span class="site-header__title">Panel de órdenes</span>
+    <span class="site-header__title">{{ auth.session.status === 'authenticated' ? 'Panel de órdenes' : 'Bienvenido' }}</span>
+    @if (auth.session.status === 'authenticated') {
+      <div class="site-header__account">
+        <span class="site-header__email">{{ auth.session.user?.email }}</span>
+        <button type="button" class="btn btn-outline-light btn-sm" (click)="logout()" [disabled]="auth.session.isLoggingOut">
+          {{ auth.session.isLoggingOut ? 'Cerrando sesión…' : 'Cerrar sesión' }}
+        </button>
+      </div>
+    }
   </div>
 </header>
 
-<router-outlet />
+@if (auth.session.status === 'checking') {
+  <p class="session-loading" role="status">Comprobando sesión…</p>
+}
+@if (auth.session.persistenceWarning && auth.session.status === 'authenticated') {
+  <div class="alert alert-warning mx-auto session-warning" role="alert">No se pudo guardar la sesión en esta pestaña; no se conservará al recargar.</div>
+}
+@if (auth.session.isLoggingOut) { <p class="session-loading" role="status">Cerrando sesión…</p> }
+@if (!auth.session.isLoggingOut) {
+  <router-outlet />
+}

@@ -1,0 +1,14 @@
+<main class="session-page">
+  <div class="session-card">
+    @if (isChecking || auth.session.status === 'checking') {
+      <p role="status">Comprobando sesión…</p>
+    } @else {
+      <h1>No pudimos comprobar tu sesión</h1>
+      <p>Comprueba tu conexión y vuelve a intentarlo. Tu sesión sigue guardada en esta pestaña.</p>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-danger" (click)="retry()">Volver a intentar</button>
+        <button type="button" class="btn btn-outline-dark" (click)="backToLogin()">Volver al inicio de sesión</button>
+      </div>
+    }
+  </div>
+</main>

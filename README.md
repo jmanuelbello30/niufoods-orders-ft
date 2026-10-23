@@ -18,7 +18,9 @@ npm.cmd ci
 npm.cmd start
 ```
 
-Abrir `http://localhost:4200/` en el navegador. La ruta inicial consulta `GET /api/v1/orders` mediante el proxy de desarrollo de `npm.cmd start`. El proxy envía las rutas `/api` (incluidas las anidadas) al backend sin modificarlas; no configura el backend ni el build de producción.
+Abrir `http://localhost:4200/` en el navegador. Tras iniciar sesión con una cuenta autorizada, el dashboard consulta `GET /api/v1/orders` mediante el proxy de desarrollo de `npm.cmd start`. El proxy envía las rutas `/api` (incluidas las anidadas) al backend sin modificarlas; no configura el backend ni el build de producción.
+
+El acceso requiere autenticación Bearer de Rails. La pestaña guarda solo el token y su vencimiento en `sessionStorage`; al recargar se comprueba la sesión con `/api/v1/auth/me` antes de consultar órdenes. La sesión vence a la hora indicada por Rails y no se renueva automáticamente. Cerrar sesión solicita revocar la sesión remota y siempre borra la sesión local; si la red falla, se avisa de que la revocación no pudo confirmarse. Cerrar la pestaña normalmente elimina `sessionStorage`, aunque la restauración del navegador puede conservarlo; ni cerrar la pestaña ni reiniciar Rails implica revocar la sesión guardada en PostgreSQL. `sessionStorage` no protege frente a XSS.
 
 Los contadores se calculan a partir del listado completo recibido y mantienen el orden de la respuesta. Los totales se muestran en CLP sin dividir por 100; las fechas y la hora de actualización exitosa se muestran en horario `America/Santiago`, incluidos los cambios de horario. El botón **Actualizar** hace una consulta manual sin superponer solicitudes. Una carga inicial muestra un indicador y no presenta ceros hasta obtener datos; una respuesta vacía muestra ceros y un mensaje. Ante un error inicial se puede volver a intentar; si falla una actualización, permanecen los últimos datos y su hora con un aviso.
 

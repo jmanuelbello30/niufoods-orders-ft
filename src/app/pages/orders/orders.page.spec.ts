@@ -1,7 +1,10 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Order } from '../../models/order.model';
+import { provideRouter } from '@angular/router';
+import { authInterceptor } from '../../interceptors/auth.interceptor';
+import { AuthSessionService } from '../../services/auth-session.service';
 import { OrdersPage } from './orders.page';
 
 const orders: Order[] = [
@@ -16,12 +19,19 @@ describe('OrdersPage', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [OrdersPage],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(withInterceptors([authInterceptor])), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthSessionService).authenticate(
+      { access_token: 'test-session-token', expires_at: new Date(Date.now() + 3600_000).toISOString() },
+      { id: 1, email: 'tester@example.test' },
+    );
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    TestBed.inject(AuthSessionService).clear();
+  });
 
   function loadedPage(): ComponentFixture<OrdersPage> {
     const fixture = TestBed.createComponent(OrdersPage);
