@@ -145,7 +145,7 @@ La próxima vez, si ya preparaste ambos proyectos, solo necesitas encender prime
 
 - Consultar las órdenes y sus contadores: total, pendientes, enviadas y con error.
 - Pulsar **Actualizar** para volver a consultar la lista y el icono de ojo para ver los detalles de una orden.
-- Usar **Reintentar envío** en órdenes pendientes o fallidas. **Esta acción puede realizar un envío real:** úsala solo con órdenes de prueba autorizadas. Si no queda claro si el envío funcionó, pulsa **Actualizar** antes de volver a intentarlo.
+- Usar **Reintentar envío** en órdenes pendientes o fallidas. **Esta acción puede realizar un envío real:** úsala solo con órdenes de prueba autorizadas. Si no queda claro si el envío funcionó, pulsa **Actualizar** antes de volver a intentarlo. **(Para ver el botón de "Reintentar envío", debes apagar la app de tiendas (levantada en http://localhost:4567/) y hacer un envío exitoso de ordenes en swagger, la orden llegará y el botón estará habilitado para esta orden.)**
 - Cerrar sesión cuando termines. Si hay un problema de conexión, la página te ofrecerá volver a intentarlo o regresar al inicio de sesión.
 
 ## Si algo no funciona
