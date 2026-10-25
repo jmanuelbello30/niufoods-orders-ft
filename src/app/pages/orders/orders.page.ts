@@ -143,10 +143,9 @@ export class OrdersPage implements OnInit, OnDestroy {
               : `No se pudo enviar la orden #${id}. Puedes volver a intentarlo`,
             kind: updated.dispatch_status === 'sent' ? 'success' : 'warning',
           };
-          if (updated.dispatch_status === 'error') {
-            this.transientRetryMessage = true;
-            this.retryNoticeTimer = setTimeout(() => this.dismissRetryNotice(), 5000);
-          }
+          this.transientRetryMessage = true;
+          this.retryNoticeTimer = setTimeout(() => this.dismissRetryNotice(),
+            updated.dispatch_status === 'sent' ? 3000 : 5000);
           break;
         }
         case 'conflict':

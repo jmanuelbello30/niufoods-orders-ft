@@ -224,10 +224,65 @@ describe('OrdersPage', () => {
     expect(element.querySelector('tbody tr:nth-child(2) .retry-button')).toBeNull();
     expect(Array.from(element.querySelectorAll('.stat-card strong')).map((node) => node.textContent)).toEqual(['3', '1', '2', '0']);
     expect(element.querySelector('[role="status"]')?.textContent).toContain('La orden #7 fue enviada a tienda');
+    expect(element.querySelector('#retry-feedback-7 .btn-close')?.getAttribute('aria-label')).toBe('Cerrar aviso de la orden #7');
     expect(element.querySelector('tbody tr:nth-child(2) td:last-child span')?.getAttribute('aria-describedby')).toBe('retry-feedback-7');
     expect(fixture.componentInstance.lastUpdated).toBe(previousTime);
     expect(fixture.componentInstance.retryingOrderId).toBeNull();
     expect((element.querySelector('.refresh-button') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('fades out the successful dispatch notice after three seconds without changing the order state', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.retryDispatch(7);
+      http.expectOne('/api/v1/orders/7/retry_dispatch').flush({ data: { id: 7, dispatch_status: 'sent' } });
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')?.textContent).toContain('La orden #7 fue enviada a tienda');
+      expect(element.querySelector('#retry-feedback-7 .btn-close')?.getAttribute('aria-label')).toBe('Cerrar aviso de la orden #7');
+      vi.advanceTimersByTime(2999);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')?.classList.contains('notification--leaving')).toBe(false);
+      vi.advanceTimersByTime(1);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')).toBeNull();
+      expect(element.querySelector('tbody tr:nth-child(2)')?.textContent).toContain('Enviada a tienda');
+      expect(fixture.componentInstance.counts.sent).toBe(2);
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets the user close the successful dispatch notice before its timer expires', () => {
+    vi.useFakeTimers();
+    let fixture: ComponentFixture<OrdersPage> | undefined;
+    try {
+      fixture = loadedPage();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.retryDispatch(7);
+      http.expectOne('/api/v1/orders/7/retry_dispatch').flush({ data: { id: 7, dispatch_status: 'sent' } });
+      fixture.detectChanges();
+      const close = element.querySelector('#retry-feedback-7 .btn-close');
+      if (!(close instanceof HTMLButtonElement)) throw new Error('Missing notification close button');
+      close.click();
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')?.classList.contains('notification--leaving')).toBe(true);
+      vi.advanceTimersByTime(250);
+      fixture.detectChanges();
+      expect(element.querySelector('#retry-feedback-7')).toBeNull();
+      vi.advanceTimersByTime(3000);
+      expect(fixture.componentInstance.retryMessage).toBeNull();
+      expect(element.querySelector('tbody tr:nth-child(2)')?.textContent).toContain('Enviada a tienda');
+    } finally {
+      fixture?.destroy();
+      vi.useRealTimers();
+    }
   });
 
   it('uses the actual error status from HTTP 200 and permits retrying again', () => {

@@ -1,65 +1,192 @@
-# Órdenes Niu Foods (frontend)
+# Panel de órdenes Niu Foods
 
-Dashboard de órdenes conectado al backend Rails. Muestra las órdenes recibidas, contadores de total, pendientes, enviadas a tienda y con error, actualización manual y reintento manual de despacho.
+Esta es la página web para consultar las órdenes de Niu Foods. Permite iniciar sesión, ver el estado de las órdenes, abrir sus detalles y actualizar la lista. También permite volver a intentar el envío de una orden pendiente o fallida.
 
-## Requisitos
+## Antes de empezar
 
-- Windows con PowerShell.
-- Node.js 24.22.1 y npm 11.19.1.
-- Angular CLI 21.2.28 (instalado como dependencia del proyecto).
-- Backend Rails independiente en ejecución en `http://localhost:3000`, accesible desde Windows. El endpoint esperado es `GET /api/v1/orders`.
+Para ver órdenes reales necesitas **dos proyectos funcionando al mismo tiempo**: esta página web y el [servidor de Niu Foods](https://github.com/jmanuelbello30/niufoods-orders-bk) (el *backend*). El servidor es otro proyecto: no está incluido aquí. el usuario y contraseña autorizados para iniciar sesión se encuentran explicados en el ReadMe de backend.
 
-## Instalación e inicio
 
-Desde la raíz del proyecto en PowerShell:
+**Importante: Sin el servidor, la página puede abrirse, pero no podrás iniciar sesión ni ver órdenes**.
 
-```powershell
-npm.cmd ci
-npm.cmd start
+## Abrir el proyecto en tu computadora
+
+### 1. Instala las herramientas necesarias
+
+Necesitas **Node.js 24** y **Git**. Node.js incluye `npm`, que se encarga de preparar lo necesario para esta página. No tienes que instalar Angular por separado. Elige **solo las instrucciones de tu sistema operativo**:
+
+**Windows**
+
+1. Entra en [la página de Node.js](https://nodejs.org/es/download), selecciona la versión 24 para Windows y descarga el instalador. Ábrelo y sigue las indicaciones en pantalla.
+2. Entra en [la página de Git para Windows](https://git-scm.com/download/win), descarga el instalador y sigue las indicaciones en pantalla.
+3. Abre PowerShell desde el menú Inicio. Si ya estaba abierto antes de instalar los programas, ciérralo y vuelve a abrirlo.
+
+**macOS**
+
+1. Entra en [la página de Node.js](https://nodejs.org/es/download), selecciona la versión 24 para macOS y descarga el instalador `.pkg`. Ábrelo y sigue las indicaciones en pantalla.
+2. Abre la aplicación **Terminal** (puedes buscarla con Spotlight).
+3. Para instalar Git, escribe el siguiente comando y pulsa Enter. Si macOS te pide instalar las herramientas de línea de comandos, acepta y espera a que termine:
+
+   ```sh
+   xcode-select --install
+   ```
+
+**Ubuntu**
+
+Abre la aplicación **Terminal**. Ejecuta **un comando por vez** y espera a que termine antes de escribir el siguiente. Si te pide tu contraseña al usar `sudo`, escríbela y pulsa Enter: no verás los caracteres mientras escribes.
+
+1. Actualiza la lista de programas disponibles:
+
+   ```sh
+   sudo apt update
+   ```
+
+2. Instala Git y la herramienta necesaria para descargar Node.js:
+
+   ```sh
+   sudo apt install git curl
+   ```
+
+3. Descarga las instrucciones de instalación de Node.js 24 de [NodeSource](https://github.com/nodesource/distributions):
+
+   ```sh
+   curl -fsSL https://deb.nodesource.com/setup_24.x -o nodesource_setup.sh
+   ```
+
+4. Prepara Ubuntu para instalar esa versión de Node.js:
+
+   ```sh
+   sudo bash nodesource_setup.sh
+   ```
+
+5. Instala Node.js (incluye `npm`):
+
+   ```sh
+   sudo apt install nodejs
+   ```
+
+Este proyecto se verificó con Node.js 24.22.1 y npm 11.19.1; no necesitas exactamente esos números.
+
+Comprueba que Node.js quedó instalado. Escribe este comando y pulsa Enter:
+
+```sh
+node --version
 ```
 
-Abrir `http://localhost:4200/` en el navegador. Tras iniciar sesión con una cuenta autorizada, el dashboard consulta `GET /api/v1/orders` mediante el proxy de desarrollo de `npm.cmd start`. El proxy envía las rutas `/api` (incluidas las anidadas) al backend sin modificarlas; no configura el backend ni el build de producción.
+Comprueba que `npm` quedó instalado:
 
-El acceso requiere autenticación Bearer de Rails. La pestaña guarda solo el token y su vencimiento en `sessionStorage`; al recargar se comprueba la sesión con `/api/v1/auth/me` antes de consultar órdenes. La sesión vence a la hora indicada por Rails y no se renueva automáticamente. Cerrar sesión solicita revocar la sesión remota y siempre borra la sesión local; si la red falla, se avisa de que la revocación no pudo confirmarse. Cerrar la pestaña normalmente elimina `sessionStorage`, aunque la restauración del navegador puede conservarlo; ni cerrar la pestaña ni reiniciar Rails implica revocar la sesión guardada en PostgreSQL. `sessionStorage` no protege frente a XSS.
-
-Los contadores se calculan a partir del listado completo recibido y mantienen el orden de la respuesta. Los totales se muestran en CLP sin dividir por 100; las fechas y la hora de actualización exitosa se muestran en horario `America/Santiago`, incluidos los cambios de horario. El botón **Actualizar** hace una consulta manual sin superponer solicitudes. Una carga inicial muestra un indicador y no presenta ceros hasta obtener datos; una respuesta vacía muestra ceros y un mensaje. Ante un error inicial se puede volver a intentar; si falla una actualización, permanecen los últimos datos y su hora con un aviso.
-
-Una actualización manual exitosa muestra “Listado de órdenes actualizado” en verde; la carga inicial no muestra ese aviso. Los avisos de actualización fallida, despacho fallido o resultado de despacho no confirmado pueden cerrarse con la X o desaparecen tras cinco segundos con una transición suave. Ocultar un aviso de resultado no confirmado no habilita otro reintento de esa orden: primero hay que actualizar el listado con éxito.
-
-El logo mostrado es el archivo original `public/images/niu-foods-logo.jpg`. No existe `public/images/niu-foods-logo.png` en este proyecto.
-
-Las órdenes pendientes o con error tienen **Reintentar envío**. La acción envía `POST /api/v1/orders/:id/retry_dispatch` con cuerpo `{}`. Solo se permite un reintento en curso y se bloquean temporalmente las demás acciones. El estado de la fila y los contadores se actualizan según la respuesta, no solo por recibir HTTP 200; la hora de actualización del listado no cambia por el POST. Ante HTTP 409 se informa que la orden ya fue enviada y se vuelve a consultar el listado. Si esa sincronización falla, o si el resultado del POST no puede confirmarse, la fila conserva sus datos y queda bloqueada para otro reintento hasta consultar el listado con éxito. **Actualizar** sigue disponible después de esos errores; no hay reintentos automáticos.
-
-Al pulsar el icono de ojo junto al número de una orden se abre un diálogo con el detalle consultado mediante `GET /api/v1/orders/:id`: cliente, productos y precios históricos y total persistido. Puede cerrarse incluso durante la carga con **Cerrar**, el botón superior o Escape; al cerrar se recuperan el foco y el desplazamiento del listado. Si falla la conexión, el diálogo ofrece **Volver a intentar** sin modificar el dashboard.
-
-Este incremento no incluye edición ni creación de órdenes, filtros, búsqueda, paginación, rutas de detalle, actualización automática, exportación, ventas acumuladas ni autenticación.
-
-## Estructura y convenciones
-
-- `src/app/models/`: contratos de órdenes y restaurantes compartidos.
-- `src/app/services/`: acceso HTTP y pruebas de servicios.
-- `src/app/pages/orders/`: página del dashboard con plantilla, estilos y pruebas junto al componente.
-- `src/app/`: componente raíz, configuración y rutas.
-
-Las convenciones del proyecto están en `AGENTS.md` y en la skill local `.opencode/skills/angular-best-practices/SKILL.md`. El tipado estricto y las pruebas ayudan a detectar problemas, pero el build por sí solo no prohíbe `any` explícito; esta regla también requiere revisión del código.
-
-## Verificar el proxy
-
-Con el backend y el frontend en ejecución, en otra ventana de PowerShell:
-
-```powershell
-curl.exe -i http://localhost:4200/api/v1/orders
+```sh
+npm --version
 ```
 
-Debe devolver una respuesta HTTP 200 con `data` del backend; si falla, comprobar primero `http://localhost:3000/api/v1/orders` desde Windows. Para comprobar la interfaz, abrir la página tanto en escritorio como en un viewport móvil, revisar tarjetas y desplazamiento horizontal de la tabla y pulsar **Actualizar**.
+Comprueba que Git quedó instalado:
 
-Para comprobar el detalle sin modificar órdenes: pulsar el ojo junto a un número en el listado, revisar el contenido del diálogo y cerrarlo tanto con **Cerrar** como con Escape. Verificar en navegador que el foco regresa al ojo, que el fondo no se desplaza mientras está abierto y que el modal se adapta al móvil. El detalle también puede consultarse mediante `curl.exe -i http://localhost:3000/api/v1/orders/8` (GET solamente).
-
-Para comprobar manualmente el reintento, usar **solo una orden de prueba autorizada** en estado pendiente o con error: pulsar **Reintentar envío** una vez y revisar el mensaje, estado y contadores. Un reintento puede despachar realmente la orden; las pruebas automatizadas usan `HttpTestingController` y no envían POST al backend. Para observar un 409 o un fallo de red sin afectar órdenes reales, usar un entorno de prueba controlado.
-
-## Build y pruebas
-
-```powershell
-npm.cmd run build
-npm.cmd test -- --watch=false
+```sh
+git --version
 ```
+
+Si alguno de estos comandos no muestra un número de versión, revisa su instalación antes de continuar.
+
+### 2. Descarga esta página web
+
+En la terminal, escribe el siguiente comando y pulsa Enter. Se creará una carpeta llamada `niufoods-orders-ft`:
+
+```sh
+git clone https://github.com/jmanuelbello30/niufoods-orders-ft.git
+```
+
+Entra en esa carpeta con este otro comando:
+
+```sh
+cd niufoods-orders-ft
+```
+
+Si ya descargaste el proyecto, no necesitas repetir la descarga: abre una terminal dentro de su carpeta y continúa con el siguiente paso.
+
+### 3. Descarga y prepara el servidor de Niu Foods
+
+Abre **otra terminal**, fuera de la carpeta `niufoods-orders-ft`: necesitarás una para el servidor y otra para esta página. Por ejemplo, puedes abrir una terminal nueva desde el menú de aplicaciones. En ella, descarga el servidor:
+
+```sh
+git clone https://github.com/jmanuelbello30/niufoods-orders-bk.git
+```
+
+Entra en la carpeta recién descargada:
+
+```sh
+cd niufoods-orders-bk
+```
+
+Si ya descargaste el servidor, abre una terminal dentro de `niufoods-orders-bk` y no repitas la descarga. Sigue **paso por paso el [README del servidor](https://github.com/jmanuelbello30/niufoods-orders-bk#readme)**. Son instrucciones de otro proyecto y pueden requerir instalar programas adicionales, preparar la base de datos y crear el usuario con el que entrarás a la página.
+
+Cuando termines, deja ese servidor funcionando en `http://localhost:3000` y mantén abierta su terminal. Si quieres comprobar un envío exitoso, consulta también en el README del servidor cómo iniciar el receptor de tienda simulada. Si el receptor está apagado, la orden se conserva, pero el envío puede marcarse como fallido.
+
+### 4. Prepara esta página web
+
+De vuelta en la terminal abierta **dentro de `niufoods-orders-ft`**, escribe este comando y espera a que termine. Descargará lo necesario para ejecutar la página; hazlo la primera vez y cuando cambien sus dependencias:
+
+```sh
+npm ci
+```
+
+### 5. Enciende la página
+
+En esa misma terminal, escribe:
+
+```sh
+npm start
+```
+
+Déjala abierta mientras uses la página. Abre el navegador y visita **http://localhost:4200/**. Inicia sesión con el usuario y contraseña autorizados que te hayan facilitado.
+
+La próxima vez, si ya preparaste ambos proyectos, solo necesitas encender primero el servidor Rails y después abrir la terminal en `niufoods-orders-ft` y ejecutar `npm start`.
+
+## Qué puedes hacer en la página
+
+- Consultar las órdenes y sus contadores: total, pendientes, enviadas y con error.
+- Pulsar **Actualizar** para volver a consultar la lista y el icono de ojo para ver los detalles de una orden.
+- Usar **Reintentar envío** en órdenes pendientes o fallidas. **Esta acción puede realizar un envío real:** úsala solo con órdenes de prueba autorizadas. Si no queda claro si el envío funcionó, pulsa **Actualizar** antes de volver a intentarlo.
+- Cerrar sesión cuando termines. Si hay un problema de conexión, la página te ofrecerá volver a intentarlo o regresar al inicio de sesión.
+
+## Si algo no funciona
+
+- **La página abre, pero no puedes iniciar sesión o ver órdenes:** comprueba que el servidor Rails siga encendido en `http://localhost:3000` y que tienes un usuario autorizado.
+- **La terminal de Windows no permite ejecutar `npm`:** si PowerShell muestra un error relacionado con `npm.ps1`, usa `npm.cmd ci` en lugar de `npm ci`, o `npm.cmd start` en lugar de `npm start`.
+- **Cerraste alguna terminal:** vuelve a encender el servidor Rails siguiendo sus instrucciones y luego ejecuta `npm start` dentro de la carpeta de esta página.
+
+## Decisiones técnicas relevantes
+
+- **Aplicaciones independientes:** el frontend y el backend se mantienen
+  en repositorios separados, con sus propias dependencias y pruebas.
+  La integración se realiza mediante una API HTTP.
+
+- **Estructura y tipado:** se utilizan componentes standalone y tipado
+  estricto, sin `any` en el código propio. Los servicios centralizan las
+  solicitudes HTTP, los modelos definen los contratos y los componentes
+  gestionan la presentación y la interacción.
+
+- **Estado y comunicación:** se emplean propiedades normales, Observables
+  de RxJS y Zone.js, sin incorporar signals ni una biblioteca de estado global.
+
+- **Autenticación:** el token Bearer se conserva en `sessionStorage` para
+  mantener la sesión al recargar. Antes de mostrar las órdenes, la sesión
+  recuperada se valida con Rails. No se almacenan contraseñas.
+  Los guards controlan la navegación y el interceptor envía el token
+  únicamente a la API propia; Rails valida cada solicitud protegida.
+
+- **Interfaz:** Bootstrap y SCSS permiten mantener un diseño responsive. Al seleccionar una orden,
+  El detalle utiliza un diálogo nativo para conservar el contexto del listado,
+  sin agregar una biblioteca de modales.
+
+- **Operación explícita:** el listado se actualiza manualmente y los
+  despachos se reintentan por acción del usuario. Se bloquean solicitudes
+  simultáneas y, ante un resultado de envío incierto, se exige consultar
+  el estado antes de permitir otro intento.
+
+- **Manejo de fallos:** si falla una actualización, se conservan los últimos
+  datos disponibles. Los errores de conexión no se interpretan como
+  credenciales inválidas.
+
+- **Pruebas:** se utilizó Vitest y las herramientas de pruebas HTTP de Angular para verificar
+  autenticación, navegación y operaciones de órdenes con respuestas simuladas,
+  sin ejecutar envíos reales.
